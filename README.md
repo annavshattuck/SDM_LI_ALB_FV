@@ -11,4 +11,4 @@ This repository contains code to run SDMs and analysis. This code supported the 
 Data will be made available without restriction upon request.
 
 ## Questions 
-Please contact that corrosponding author on the manuscript. 
+Please contact that corresponding author on the manuscript. 
