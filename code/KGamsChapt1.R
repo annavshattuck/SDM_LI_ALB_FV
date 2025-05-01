@@ -1,16 +1,15 @@
 # Chapter 1 Article code
 
 #-------LIBRARIES--------
-library(dismo) #maxent
+library(dismo)
 library(tidyverse)
-library(mgcv) #GAMS
-library(mgcViz) #package for GAM model performance vis
+library(mgcv)
+library(mgcViz)
 library(RColorBrewer)
 library(sdm)
 library(gganimate)
 library(transformr) 
 library(sf)
-# insta1llAll() #for installing packages for sdm you might not already have (call it once)
 library(tidyverse)
 library(caret)
 library(dplyr)
@@ -35,7 +34,7 @@ library(gridExtra)
 #-----DATA------
 
 ##-----General albo data----
-load("~/Desktop/R/LongIslandCoding/Data/AlboTraining.RData")
+load("~/Desktop/R/SDM_LI_ALB_FV/Data/AlboTraining.RData")
 alboraw <- albotraining
 rm(albotraining)
 alboraw$Occurrence <- alboraw$Occurrence %>% as.logical()
@@ -55,8 +54,7 @@ albo <- alboraw %>% dplyr::select(Occurrence,Type,Year,Month,
 # Remove NAs
 albo <- albo %>% drop_na(Type,Year,Month,Imp_.25km2,EVI_.25km2,DLST_1km2,NLST_1km2,Type_.25km2,Longitude,Latitude,Site)
 
-
-# alboME (maxent) make (with type_.25km2 made into numbers)
+# alboME (maxent) make (with type_.25km2 made into numbers for MaxEnt)
 alboME <- albo
 alboME <- alboME %>% mutate(Type_.25km2 = recode(Type_.25km2,
                                                  "Natural"=1,
@@ -66,7 +64,7 @@ alboME <- alboME %>% mutate(Type_.25km2 = recode(Type_.25km2,
 
 ##-----General prediction data----
 # Load in Prediction dataframe 
-load("~/Desktop/R/LongIslandCoding/Output/LSTmosquitoPredict.RData")
+load("~/Desktop/R/SDM_LI_ALB_FV/Output/LSTmosquitoPredict.RData")
 
 # add in a type column for to control for TYPE of trap 
 LST_Predict$Type <- 1
@@ -76,8 +74,6 @@ LST_Predict$Type <- LST_Predict$Type %>% as.factor()
 # Remove NAs for DLST and NLST and Type_Site
 LST_Predict <- LST_Predict %>% 
   drop_na(Type,Year,Month,Imp_.25km2,EVI_.25km2,DLST_1km2,NLST_1km2,Type_.25km2,coords.x1.x,coords.x2.x,Site)
-
-
 LST_Predict$Type<-LST_Predict$Type%>%factor(levels=c("1","2","3","4"),labels=c("1","0","BG Sentinel","Mosquito Magnet"))
 
 # I added in shrub and barren!
@@ -105,7 +101,6 @@ LST_Predict <- LST_Predict %>% filter(Year == 2023)
 
 # Make a copy of the data that includes lambda 
 LST_Predict_Lambda <- LST_Predict
-
 
 
 ###-----w/o lambda data for models----
@@ -166,7 +161,6 @@ Lambda<-function(MDR, EFD, PEA, ls){
 # Add lambda to data
 albomechanistic <- albo
 albomechanistic <- albomechanistic %>% mutate(LST_Mean = ((DLST_1km2+NLST_1km2)/2))
-
 albomechanistic <- albomechanistic %>% mutate(MDR = MDR(LST_Mean),
                                               EFD = EFD(LST_Mean),
                                               PEA = PEA(LST_Mean),
@@ -235,9 +229,9 @@ LST_Predict_Lambda <- LST_Predict_Lambda %>%
 
 ##-----------Regression----------
 ###-----------GAM----------
-if (file.exists("./Code/k/AlboGAM.RData")) {
+if (file.exists("./Data/SDM/AlboGAM.RData")) {
   # If the file exists, load it
-  load("./Code/k/AlboGAM.RData")
+  load("./Data/SDM/AlboGAM.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -257,19 +251,17 @@ if (file.exists("./Code/k/AlboGAM.RData")) {
                  data = albo,
                  family = binomial)
   summary(AlboGAM)
-  save(AlboGAM, file = "./Code/k/AlboGAM.RData")
+  save(AlboGAM, file = "./Data/SDM/AlboGAM.RData")
   
   print("File created and saved successfully.")
 }
 
 
-# check.gamViz(getViz(AlboGAM))
-
 ##-----------Machine-learning----------
 ###-----------RandomForest----------
-if (file.exists("./Code/k/AlboRF.RData")) {
+if (file.exists("./Data/SDM/AlboRF.RData")) {
   # If the file exists, load it
-  load("./Code/k/AlboRF.RData")
+  load("./Data/SDM/AlboRF.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -287,15 +279,15 @@ if (file.exists("./Code/k/AlboRF.RData")) {
                          data = albo)
   summary(AlboRF)
   
-  save(AlboRF, file = "./Code/k/AlboRF.RData")
+  save(AlboRF, file = "./Data/SDM/AlboRF.RData")
   
   print("File created and saved successfully.")
 }
 
 ###-----------BRT----------
-if (file.exists("./Code/k/AlboBRT.RData")) {
+if (file.exists("./Data/SDM/AlboBRT.RData")) {
   # If the file exists, load it
-  load("./Code/k/AlboBRT.RData")
+  load("./Data/SDM/AlboBRT.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -314,15 +306,15 @@ if (file.exists("./Code/k/AlboBRT.RData")) {
                  methods = c('brt'))
   summary(AlboBRT)
   
-  save(AlboBRT, file = "./Code/k/AlboBRT.RData")
+  save(AlboBRT, file = "./Data/SDM/AlboBRT.RData")
   
   print("File created and saved successfully.")
 }
 
 ###-----------MaxEnt----------
-if (file.exists("./Code/k/AlboMaxEnt.RData")) {
+if (file.exists("./Data/SDM/AlboMaxEnt.RData")) {
   # If the file exists, load it
-  load("./Code/k/AlboMaxEnt.RData")
+  load("./Data/SDM/AlboMaxEnt.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -341,7 +333,7 @@ if (file.exists("./Code/k/AlboMaxEnt.RData")) {
                     methods = c('maxent'))
   summary(AlboMaxEnt)
   
-  save(AlboMaxEnt, file = "./Code/k/AlboMaxEnt.RData")
+  save(AlboMaxEnt, file = "./Data/SDM/AlboMaxEnt.RData")
   
   print("File created and saved successfully.")
 }
@@ -382,470 +374,14 @@ LST_Predict <- data.frame(LST_Predict,
 LST_Predict <- LST_Predict %>% rename(SuitabilityMaxEnt=id_1.sp_1.m_maxent)
 LST_Predict$SuitabilityMaxEnt <- (LST_Predict$SuitabilityMaxEnt - min(LST_Predict$SuitabilityMaxEnt))/(max(LST_Predict$SuitabilityMaxEnt)-min(LST_Predict$SuitabilityMaxEnt))
 
-
 rm(SuitabilityGAM, SuitabilityMaxEnt, SuitabilityRF)
 
 
 #-------CROSS-VALIDATION-------
-# ---------Longitude Subsampling (10 long slices, hold one out for testing)---------
-maxlong <- max(albo$Longitude)+5
-minlong <- min(albo$Longitude)-5
-widthlong <- (maxlong-minlong)/10
-
-## ---------Models (NO LAMBDA, buffer @ .25km2)---------
-
-
-if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_long.RData")) {
-  # If the file exists, load it
-  load("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_long.RData")
-  print("File loaded successfully.")
-} else {
-  # If the file does not exist, run code to create the file
-  print("File does not exist. Running code to create file.")
-  
-  Sys.time()
-  fit_models_long<-lapply(1:10,function(i){
-    tryCatch({ ##This is done so that it doesn't stop everytime something throws an error
-      # split albo into training and testing data (for GAM and RF) - by site (not datapoint)
-      testing_dataset_albo <- albo %>% filter(Longitude > (minlong+widthlong*(i-1)), 
-                                              Longitude < (maxlong-widthlong*(10-i)))
-      training_dataset_albo <- albo %>% filter(Longitude <= (minlong+widthlong*(i-1))| 
-                                                 Longitude >= (maxlong-widthlong*(10-i)))
-      
-      
-      # make datasets for BRT based on data partitioned above (can use same testing data as RF and GAM)
-      training_dataset_albo_BRT <- sdmData(Occurrence ~ 
-                                             Type +
-                                             Year + 
-                                             Month +
-                                             Imp_.25km2 + 
-                                             EVI_.25km2 + 
-                                             DLST_1km2 +
-                                             NLST_1km2 +
-                                             Type_.25km2 +
-                                             Longitude + 
-                                             Latitude +
-                                             Site+
-                                             coords(Longitude+Latitude), 
-                                           train=data.frame(training_dataset_albo))
-      
-      # Make datasets for MaxEnt Based on Data partitioned above
-      # alboME make (with type_.25km2 made into numbers)
-      training_dataset_albo_ME <- training_dataset_albo
-      training_dataset_albo_ME <- training_dataset_albo_ME %>% mutate(Type_.25km2 = recode(Type_.25km2,
-                                                                                           "Natural"=1,
-                                                                                           "Altered"=2,
-                                                                                           "Developed - Low"=3,
-                                                                                           "Developed - Med/High"=4))
-      training_dataset_albo_ME_m <- sdmData(Occurrence ~
-                                              Type +
-                                              Year +
-                                              Month +
-                                              Imp_.25km2 +
-                                              EVI_.25km2 +
-                                              DLST_1km2 +
-                                              NLST_1km2 +
-                                              Type_.25km2 +
-                                              coords(Longitude+Latitude),
-                                            train=data.frame(training_dataset_albo_ME))
-      
-      testing_dataset_albo_ME <- testing_dataset_albo
-      testing_dataset_albo_ME <- testing_dataset_albo_ME %>% mutate(Type_.25km2 = recode(Type_.25km2,
-                                                                                         "Natural"=1,
-                                                                                         "Altered"=2,
-                                                                                         "Developed - Low"=3,
-                                                                                         "Developed - Med/High"=4))
-      testing_dataset_albo_ME <- testing_dataset_albo_ME %>% 
-        dplyr::select(Type,Year, Month,Imp_.25km2, EVI_.25km2,DLST_1km2,NLST_1km2, Type_.25km2)
-      training_dataset_albo_ME <- training_dataset_albo_ME %>%
-        dplyr::select(Type,Year, Month,Imp_.25km2, EVI_.25km2,DLST_1km2,NLST_1km2, Type_.25km2)
-      
-      
-      print(paste0(i,": Fitting Models"))
-      # GAM and Random Forest
-      Albo_GAM_.25 <- gam(Occurrence ~
-                            Type +
-                            Year +
-                            Month +
-                            s(Imp_.25km2,k=5) + 
-                            s(EVI_.25km2,k=5) +
-                            s(DLST_1km2,k=5) +
-                            s(NLST_1km2,k=5) +
-                            Type_.25km2 +
-                            s(Site,bs = "re"),
-                          data = training_dataset_albo,
-                          family = binomial)
-      
-      Albo_RF_.25 <- randomForest(Occurrence ~ 
-                                    Type +
-                                    Year + 
-                                    Month +
-                                    Imp_.25km2 + 
-                                    EVI_.25km2 + 
-                                    DLST_1km2 +
-                                    NLST_1km2 +
-                                    Type_.25km2, 
-                                  data = training_dataset_albo)
-      
-      # Boosted Regression Tree (BRT)
-      Albo_BRT_.25 <- sdm(Occurrence ~ 
-                            Type +
-                            Year + 
-                            Month +
-                            Imp_.25km2 + 
-                            EVI_.25km2 + 
-                            DLST_1km2 +
-                            NLST_1km2 +
-                            Type_.25km2, 
-                          data = training_dataset_albo_BRT,
-                          methods = c('brt'))
-      
-      # MaxEnt
-      Albo_MaxEnt_.25 <- sdm(Occurrence ~ 
-                               Type +
-                               Year + 
-                               Month +
-                               Imp_.25km2 + 
-                               EVI_.25km2 + 
-                               DLST_1km2 +
-                               NLST_1km2+
-                               Type_.25km2, 
-                             data = training_dataset_albo_ME_m,
-                             methods = c('maxent'))
-      
-      #Predict outcome for the testing data
-      print(paste0(i,": Predictions"))
-      
-      pred_Albo_GAM_.25_testing <- predict(Albo_GAM_.25, newdata = testing_dataset_albo,exclude="s(Site)",type="response")
-      pred_Albo_GAM_.25_training <- predict(Albo_GAM_.25, type="response",keep_prediction_data=T)
-      
-      pred_Albo_RF_.25_testing <- predict(Albo_RF_.25, newdata = testing_dataset_albo)
-      pred_Albo_RF_.25_training <- predict(Albo_RF_.25)
-      
-      pred_Albo_BRT_.25_testing <- predict(Albo_BRT_.25, newdata = testing_dataset_albo, method = "brt", mean=T)%>% data.frame() %>% rename(pred_Albo_BRT_.25_testing=id_1.sp_1.m_brt)
-      pred_Albo_BRT_.25_training <- predict(Albo_BRT_.25, newdata = training_dataset_albo, method = "brt", mean=T)%>% data.frame() %>% rename(pred_Albo_BRT_.25_training=id_1.sp_1.m_brt)
-      
-      pred_Albo_MaxEnt_.25_testing <- predict(Albo_MaxEnt_.25, newdata=testing_dataset_albo_ME, method='maxent')%>% data.frame() %>% rename(pred_Albo_MaxEnt_.25_testing=id_1.sp_1.m_maxent)
-      pred_Albo_MaxEnt_.25_training <- predict(Albo_MaxEnt_.25, newdata=training_dataset_albo_ME, method='maxent')%>% data.frame() %>% rename(pred_Albo_MaxEnt_.25_training=id_1.sp_1.m_maxent)
-      
-      #Create dataframes of predictions and test data and save into respective lists
-      #Names columns in dataframes with run number
-      pred_df_.25 <- data.frame(Site=testing_dataset_albo$Site, Index= 1:dim(pred_Albo_GAM_.25_testing)[1],
-                                Type="OOS",
-                                pred_Albo_GAM_.25=pred_Albo_GAM_.25_testing,
-                                pred_Albo_RF_.25=pred_Albo_RF_.25_testing,
-                                pred_Albo_BRT_.25=pred_Albo_BRT_.25_testing,
-                                pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_testing,
-                                Occurrence=testing_dataset_albo$Occurrence) %>% rename(pred_Albo_BRT_.25=pred_Albo_BRT_.25_testing, pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_testing)
-      
-      pred_df_.25_training <- data.frame(Site=Albo_GAM_.25$model$Site, Index= 1:dim(pred_Albo_GAM_.25_training)[1],
-                                         Type="WS",
-                                         pred_Albo_GAM_.25=pred_Albo_GAM_.25_training,
-                                         pred_Albo_RF_.25=pred_Albo_RF_.25_training,
-                                         pred_Albo_BRT_.25=pred_Albo_BRT_.25_training,
-                                         pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_training,
-                                         Occurrence=Albo_GAM_.25$model$Occurrence)%>% rename(pred_Albo_BRT_.25=pred_Albo_BRT_.25_training, pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_training)
-      
-      pred_df_.25 <- rbind(pred_df_.25,pred_df_.25_training)
-      
-      # Scale suitability
-      pred_df_.25[,"pred_Albo_GAM_.25"] <- (pred_df_.25$pred_Albo_GAM_.25 - min(pred_df_.25$pred_Albo_GAM_.25))/(max(pred_df_.25$pred_Albo_GAM_.25)-min(pred_df_.25$pred_Albo_GAM_.25))
-      pred_df_.25[,"pred_Albo_RF_.25"] <- (pred_df_.25$pred_Albo_RF_.25 - min(pred_df_.25$pred_Albo_RF_.25))/(max(pred_df_.25$pred_Albo_RF_.25)-min(pred_df_.25$pred_Albo_RF_.25))
-      pred_df_.25[,"pred_Albo_BRT_.25"] <- (pred_df_.25$pred_Albo_BRT_.25 - min(pred_df_.25$pred_Albo_BRT_.25))/(max(pred_df_.25$pred_Albo_BRT_.25)-min(pred_df_.25$pred_Albo_BRT_.25))
-      pred_df_.25[,"pred_Albo_MaxEnt_.25"] <- (pred_df_.25$pred_Albo_MaxEnt_.25 - min(pred_df_.25$pred_Albo_MaxEnt_.25))/(max(pred_df_.25$pred_Albo_MaxEnt_.25)-min(pred_df_.25$pred_Albo_MaxEnt_.25))
-      
-      
-      pred_df_.25 <- pred_df_.25 %>% 
-        mutate(Run = i)
-      
-      #Create prediction objects for performance
-      temp <- pred_df_.25%>%
-        filter(Type=="OOS")
-      
-      Albo_GAM_.25_pred_test<-prediction(temp$pred_Albo_GAM_.25,temp$Occurrence)
-      Albo_RF_.25_pred_test <- prediction(temp$pred_Albo_RF_.25,temp$Occurrence)
-      Albo_BRT_.25_pred_test <- prediction(temp$pred_Albo_BRT_.25,temp$Occurrence)
-      Albo_MaxEnt_.25_pred_test <- prediction(temp$pred_Albo_MaxEnt_.25,temp$Occurrence)
-      
-      temp <- pred_df_.25%>%
-        filter(Type=="WS")
-      Albo_GAM_.25_pred_train<-prediction(temp$pred_Albo_GAM_.25,temp$Occurrence)
-      Albo_RF_.25_pred_train <- prediction(temp$pred_Albo_RF_.25,temp$Occurrence)
-      Albo_BRT_.25_pred_train <- prediction(temp$pred_Albo_BRT_.25,temp$Occurrence)
-      Albo_MaxEnt_.25_pred_train <- prediction(temp$pred_Albo_MaxEnt_.25,temp$Occurrence)
-      
-      #Return a list of needed objects
-      r_list_.25<-list(pred_df_.25,
-                       Albo_GAM_.25_pred_test,
-                       Albo_RF_.25_pred_test,
-                       Albo_BRT_.25_pred_test,
-                       Albo_MaxEnt_.25_pred_test,
-                       Albo_GAM_.25_pred_train,
-                       Albo_RF_.25_pred_train,
-                       Albo_BRT_.25_pred_train,
-                       Albo_MaxEnt_.25_pred_train
-      )
-      # names(r_list_.25)<-c("Pred_DF",
-      #                      "GAM_Pred","RF_Pred","BRT_Pred","MaxEnt_Pred")
-      names(r_list_.25)<-c(paste0("Pred_DF: ",i),
-                           paste0("GAM_Pred_test: ",i),
-                           paste0("RF_Pred_test: ",i),
-                           paste0("BRT_Pred_test: ",i),
-                           paste0("MaxEnt_Pred_test: ",i),
-                           paste0("GAM_Pred_train: ",i),
-                           paste0("RF_Pred_train: ",i),
-                           paste0("BRT_Pred_train: ",i),
-                           paste0("MaxEnt_Pred_train: ",i)
-      )
-      
-      
-      return(r_list_.25)
-    },
-    error=function(cond){ #This tells it what to do if there is an error
-      return(NULL)        #This just says to return NULL and go to the next iteration
-    })
-  })%>%unlist(recursive = F)
-  Sys.time()
-  
-  save(fit_models_long, file="/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_long.RData")
-  
-  print("File created and saved successfully.")
-}
-
-rm(maxlong, minlong, widthlong)
-
-
-# ---------Latitude Subsampling (5 lat slices, hold one out for testing)---------
-
-maxlat <- max(albo$Latitude)+5
-minlat <- min(albo$Latitude)-5
-widthlat <- (maxlat-minlat)/5
-
-## ---------Models (NO LAMBDA, buffer @ .25km2)---------
-if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_lat.RData")) {
-  # If the file exists, load it
-  load("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_lat.RData")
-  print("File loaded successfully.")
-} else {
-  # If the file does not exist, run code to create the file
-  print("File does not exist. Running code to create file.")
-  
-  Sys.time()
-  fit_models_lat<-lapply(1:5,function(i){
-    # split albo into training and testing data (for GAM and RF) - by site (not datapoint)
-    testing_dataset_albo <- albo %>% filter(Latitude > (minlat+widthlat*(i-1)), 
-                                            Latitude < (maxlat-widthlat*(5-i)))
-    training_dataset_albo <- albo %>% filter(Latitude <= (minlat+widthlat*(i-1))| 
-                                               Latitude >= (maxlat-widthlat*(5-i)))
-    
-    
-    # make datasets for BRT based on data partitioned above (can use same testing data as RF and GAM)
-    training_dataset_albo_BRT <- sdmData(Occurrence ~ 
-                                           Type +
-                                           Year + 
-                                           Month +
-                                           Imp_.25km2 + 
-                                           EVI_.25km2 + 
-                                           DLST_1km2 +
-                                           NLST_1km2 +
-                                           Type_.25km2 +
-                                           Longitude + 
-                                           Latitude +
-                                           Site+
-                                           coords(Longitude+Latitude), 
-                                         train=data.frame(training_dataset_albo))
-    
-    # Make datasets for MaxEnt Based on Data partitioned above
-    # alboME make (with type_.25km2 made into numbers)
-    training_dataset_albo_ME <- training_dataset_albo
-    training_dataset_albo_ME <- training_dataset_albo_ME %>% mutate(Type_.25km2 = recode(Type_.25km2,
-                                                                                         "Natural"=1,
-                                                                                         "Altered"=2,
-                                                                                         "Developed - Low"=3,
-                                                                                         "Developed - Med/High"=4))
-    training_dataset_albo_ME_m <- sdmData(Occurrence ~
-                                            Type +
-                                            Year +
-                                            Month +
-                                            Imp_.25km2 +
-                                            EVI_.25km2 +
-                                            DLST_1km2 +
-                                            NLST_1km2 +
-                                            Type_.25km2 +
-                                            coords(Longitude+Latitude),
-                                          train=data.frame(training_dataset_albo_ME))
-    
-    testing_dataset_albo_ME <- testing_dataset_albo
-    testing_dataset_albo_ME <- testing_dataset_albo_ME %>% mutate(Type_.25km2 = recode(Type_.25km2,
-                                                                                       "Natural"=1,
-                                                                                       "Altered"=2,
-                                                                                       "Developed - Low"=3,
-                                                                                       "Developed - Med/High"=4))
-    testing_dataset_albo_ME <- testing_dataset_albo_ME %>% 
-      dplyr::select(Type,Year, Month,Imp_.25km2, EVI_.25km2,DLST_1km2,NLST_1km2, Type_.25km2)
-    training_dataset_albo_ME <- training_dataset_albo_ME %>%
-      dplyr::select(Type,Year, Month,Imp_.25km2, EVI_.25km2,DLST_1km2,NLST_1km2, Type_.25km2)
-    
-    tryCatch({ ##This is done so that it doesn't stop everytime something throws an error
-      print(paste0(i,": Fitting Models"))
-      # GAM and Random Forest
-      Albo_GAM_.25 <- gam(Occurrence ~
-                            Type +
-                            Year +
-                            Month +
-                            s(Imp_.25km2,k=5) + 
-                            s(EVI_.25km2,k=5) +
-                            s(DLST_1km2,k=5) +
-                            s(NLST_1km2,k=5) +
-                            Type_.25km2 +
-                            s(Site,bs = "re"),
-                          data = training_dataset_albo,
-                          family = binomial)
-      
-      Albo_RF_.25 <- randomForest(Occurrence ~ 
-                                    Type +
-                                    Year + 
-                                    Month +
-                                    Imp_.25km2 + 
-                                    EVI_.25km2 + 
-                                    DLST_1km2 +
-                                    NLST_1km2 +
-                                    Type_.25km2, 
-                                  data = training_dataset_albo)
-      
-      # Boosted Regression Tree (BRT)
-      Albo_BRT_.25 <- sdm(Occurrence ~ 
-                            Type +
-                            Year + 
-                            Month +
-                            Imp_.25km2 + 
-                            EVI_.25km2 + 
-                            DLST_1km2 +
-                            NLST_1km2 +
-                            Type_.25km2, 
-                          data = training_dataset_albo_BRT,
-                          methods = c('brt'))
-      
-      # MaxEnt
-      Albo_MaxEnt_.25 <- sdm(Occurrence ~ 
-                               Type +
-                               Year + 
-                               Month +
-                               Imp_.25km2 + 
-                               EVI_.25km2 + 
-                               DLST_1km2 +
-                               NLST_1km2+
-                               Type_.25km2, 
-                             data = training_dataset_albo_ME_m,
-                             methods = c('maxent'))
-      
-      #Predict outcome for the testing data
-      print(paste0(i,": Predictions"))
-      
-      pred_Albo_GAM_.25_testing <- predict(Albo_GAM_.25, newdata = testing_dataset_albo,exclude="s(Site)",type="response")
-      pred_Albo_GAM_.25_training <- predict(Albo_GAM_.25, type="response",keep_prediction_data=T)
-      
-      pred_Albo_RF_.25_testing <- predict(Albo_RF_.25, newdata = testing_dataset_albo)
-      pred_Albo_RF_.25_training <- predict(Albo_RF_.25)
-      
-      pred_Albo_BRT_.25_testing <- predict(Albo_BRT_.25, newdata = testing_dataset_albo, method = "brt", mean=T)%>% data.frame() %>% rename(pred_Albo_BRT_.25_testing=id_1.sp_1.m_brt)
-      pred_Albo_BRT_.25_training <- predict(Albo_BRT_.25, newdata = training_dataset_albo, method = "brt", mean=T)%>% data.frame() %>% rename(pred_Albo_BRT_.25_training=id_1.sp_1.m_brt)
-      
-      pred_Albo_MaxEnt_.25_testing <- predict(Albo_MaxEnt_.25, newdata=testing_dataset_albo_ME, method='maxent')%>% data.frame() %>% rename(pred_Albo_MaxEnt_.25_testing=id_1.sp_1.m_maxent)
-      pred_Albo_MaxEnt_.25_training <- predict(Albo_MaxEnt_.25, newdata=training_dataset_albo_ME, method='maxent')%>% data.frame() %>% rename(pred_Albo_MaxEnt_.25_training=id_1.sp_1.m_maxent)
-      
-      #Create dataframes of predictions and test data and save into respective lists
-      #Names columns in dataframes with run number
-      pred_df_.25 <- data.frame(Site=testing_dataset_albo$Site, Index= 1:dim(pred_Albo_GAM_.25_testing)[1],
-                                Type="OOS",
-                                pred_Albo_GAM_.25=pred_Albo_GAM_.25_testing,
-                                pred_Albo_RF_.25=pred_Albo_RF_.25_testing,
-                                pred_Albo_BRT_.25=pred_Albo_BRT_.25_testing,
-                                pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_testing,
-                                Occurrence=testing_dataset_albo$Occurrence) %>% rename(pred_Albo_BRT_.25=pred_Albo_BRT_.25_testing, pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_testing)
-      
-      pred_df_.25_training <- data.frame(Site=Albo_GAM_.25$model$Site, Index= 1:dim(pred_Albo_GAM_.25_training)[1],
-                                         Type="WS",
-                                         pred_Albo_GAM_.25=pred_Albo_GAM_.25_training,
-                                         pred_Albo_RF_.25=pred_Albo_RF_.25_training,
-                                         pred_Albo_BRT_.25=pred_Albo_BRT_.25_training,
-                                         pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_training,
-                                         Occurrence=Albo_GAM_.25$model$Occurrence)%>% rename(pred_Albo_BRT_.25=pred_Albo_BRT_.25_training, pred_Albo_MaxEnt_.25=pred_Albo_MaxEnt_.25_training)
-      
-      pred_df_.25 <- rbind(pred_df_.25,pred_df_.25_training)
-      
-      # Scale suitability
-      pred_df_.25[,"pred_Albo_GAM_.25"] <- (pred_df_.25$pred_Albo_GAM_.25 - min(pred_df_.25$pred_Albo_GAM_.25))/(max(pred_df_.25$pred_Albo_GAM_.25)-min(pred_df_.25$pred_Albo_GAM_.25))
-      pred_df_.25[,"pred_Albo_RF_.25"] <- (pred_df_.25$pred_Albo_RF_.25 - min(pred_df_.25$pred_Albo_RF_.25))/(max(pred_df_.25$pred_Albo_RF_.25)-min(pred_df_.25$pred_Albo_RF_.25))
-      pred_df_.25[,"pred_Albo_BRT_.25"] <- (pred_df_.25$pred_Albo_BRT_.25 - min(pred_df_.25$pred_Albo_BRT_.25))/(max(pred_df_.25$pred_Albo_BRT_.25)-min(pred_df_.25$pred_Albo_BRT_.25))
-      pred_df_.25[,"pred_Albo_MaxEnt_.25"] <- (pred_df_.25$pred_Albo_MaxEnt_.25 - min(pred_df_.25$pred_Albo_MaxEnt_.25))/(max(pred_df_.25$pred_Albo_MaxEnt_.25)-min(pred_df_.25$pred_Albo_MaxEnt_.25))
-      
-      
-      pred_df_.25 <- pred_df_.25 %>% 
-        mutate(Run = i)
-      
-      #Create prediction objects for performance
-      temp <- pred_df_.25%>%
-        filter(Type=="OOS")
-      
-      Albo_GAM_.25_pred_test<-prediction(temp$pred_Albo_GAM_.25,temp$Occurrence)
-      Albo_RF_.25_pred_test <- prediction(temp$pred_Albo_RF_.25,temp$Occurrence)
-      Albo_BRT_.25_pred_test <- prediction(temp$pred_Albo_BRT_.25,temp$Occurrence)
-      Albo_MaxEnt_.25_pred_test <- prediction(temp$pred_Albo_MaxEnt_.25,temp$Occurrence)
-      
-      temp <- pred_df_.25%>%
-        filter(Type=="WS")
-      Albo_GAM_.25_pred_train<-prediction(temp$pred_Albo_GAM_.25,temp$Occurrence)
-      Albo_RF_.25_pred_train <- prediction(temp$pred_Albo_RF_.25,temp$Occurrence)
-      Albo_BRT_.25_pred_train <- prediction(temp$pred_Albo_BRT_.25,temp$Occurrence)
-      Albo_MaxEnt_.25_pred_train <- prediction(temp$pred_Albo_MaxEnt_.25,temp$Occurrence)
-      
-      #Return a list of needed objects
-      r_list_.25<-list(pred_df_.25,
-                       Albo_GAM_.25_pred_test,
-                       Albo_RF_.25_pred_test,
-                       Albo_BRT_.25_pred_test,
-                       Albo_MaxEnt_.25_pred_test,
-                       Albo_GAM_.25_pred_train,
-                       Albo_RF_.25_pred_train,
-                       Albo_BRT_.25_pred_train,
-                       Albo_MaxEnt_.25_pred_train
-      )
-      # names(r_list_.25)<-c("Pred_DF",
-      #                      "GAM_Pred","RF_Pred","BRT_Pred","MaxEnt_Pred")
-      names(r_list_.25)<-c(paste0("Pred_DF: ",i),
-                           paste0("GAM_Pred_test: ",i),
-                           paste0("RF_Pred_test: ",i),
-                           paste0("BRT_Pred_test: ",i),
-                           paste0("MaxEnt_Pred_test: ",i),
-                           paste0("GAM_Pred_train: ",i),
-                           paste0("RF_Pred_train: ",i),
-                           paste0("BRT_Pred_train: ",i),
-                           paste0("MaxEnt_Pred_train: ",i)
-      )
-      
-      return(r_list_.25)
-    },
-    error=function(cond){ #This tells it what to do if there is an error
-      return(NULL)        #This just says to return NULL and go to the next iteration
-    })
-  })%>%unlist(recursive = F)
-  Sys.time()
-  
-  save(fit_models_lat, file="/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_lat.RData")
-  
-  print("File created and saved successfully.")
-}
-
-
-rm(minlat, maxlat, widthlat)
-
 # ---------Township Subsampling (10 townships, hold one out for testing)---------
-
-## ---------Models (NO LAMBDA, buffer @ .25km2)---------
-if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_township.RData")) {
+if (file.exists("/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_township.RData")) {
   # If the file exists, load it
-  load("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_township.RData")
+  load("/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_township.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -1055,7 +591,7 @@ if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_township.RDa
   })%>%unlist(recursive = F)
   Sys.time()
   
-  save(fit_models_township, file="/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_township.RData")
+  save(fit_models_township, file="/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_township.RData")
   
   
   print("File created and saved successfully.")
@@ -1069,11 +605,9 @@ runs=50
 # Set seed for reproducibility of randomness  
 set.seed(6)
 
-
-## ---------Models (NO LAMBDA, buffer @ .25km2)---------
-if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_random.RData")) {
+if (file.exists("/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_random.RData")) {
   # If the file exists, load it
-  load("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_random.RData")
+  load("/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_random.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -1281,7 +815,7 @@ if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_random.RData
     })
   })%>%unlist(recursive = F)
   Sys.time()
-  save(fit_models, file="/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_random.RData")
+  save(fit_models, file="/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_random.RData")
   
   print("File created and saved successfully.")
 }
@@ -1289,83 +823,7 @@ rm(runs)
 
 # ---------AUC values---------
 
-##---------AUC long Sampling---------
-###---------AUC NO LAMBDA long Sampling---------
-AUCs_long<-lapply(seq(2,(90),by=9),function(i){
-  # Test
-  temp_GAM_test<-performance(fit_models_long[[i]],measure = "auc", x.measure = "cutoff")
-  AUC_GAM_test<-temp_GAM_test@y.values[[1]]
-  temp_RF_test<-performance(fit_models_long[[i+1]],measure = "auc", x.measure = "cutoff")
-  AUC_RF_test<-temp_RF_test@y.values[[1]]
-  temp_BRT_test<-performance(fit_models_long[[i+2]],measure = "auc", x.measure = "cutoff")
-  AUC_BRT_test<-temp_BRT_test@y.values[[1]]
-  temp_MaxEnt_test<-performance(fit_models_long[[i+3]],measure = "auc", x.measure = "cutoff")
-  AUC_MaxEnt_test<-temp_MaxEnt_test@y.values[[1]]
-  # train
-  temp_GAM_train<-performance(fit_models_long[[i+4]],measure = "auc", x.measure = "cutoff")
-  AUC_GAM_train<-temp_GAM_train@y.values[[1]]
-  temp_RF_train<-performance(fit_models_long[[i+5]],measure = "auc", x.measure = "cutoff")
-  AUC_RF_train<-temp_RF_train@y.values[[1]]
-  temp_BRT_train<-performance(fit_models_long[[i+6]],measure = "auc", x.measure = "cutoff")
-  AUC_BRT_train<-temp_BRT_train@y.values[[1]]
-  temp_MaxEnt_train<-performance(fit_models_long[[i+7]],measure = "auc", x.measure = "cutoff")
-  AUC_MaxEnt_train<-temp_MaxEnt_train@y.values[[1]]
-  temp<-data.frame(GAM_test=AUC_GAM_test,
-                   RF_test=AUC_RF_test,
-                   BRT_test=AUC_BRT_test, 
-                   MaxEnt_test=AUC_MaxEnt_test,
-                   GAM_train=AUC_GAM_train,
-                   RF_train=AUC_RF_train,
-                   BRT_train=AUC_BRT_train, 
-                   MaxEnt_train=AUC_MaxEnt_train)%>%
-    mutate(Best=names(which.max(.[,1:4])))    ##This will determine which model has the best AUC for each iter
-  return(temp)
-})%>%
-  bind_rows()
-AUCs_long$Best<-AUCs_long$Best%>%factor()
-
-
-
-
-##---------AUC lat Sampling---------
-###---------AUC NO LAMBDA lat Sampling---------
-AUCs_lat<-lapply(seq(2,(45),by=9),function(i){
-  # Test
-  temp_GAM_test<-performance(fit_models_lat[[i]],measure = "auc", x.measure = "cutoff")
-  AUC_GAM_test<-temp_GAM_test@y.values[[1]]
-  temp_RF_test<-performance(fit_models_lat[[i+1]],measure = "auc", x.measure = "cutoff")
-  AUC_RF_test<-temp_RF_test@y.values[[1]]
-  temp_BRT_test<-performance(fit_models_lat[[i+2]],measure = "auc", x.measure = "cutoff")
-  AUC_BRT_test<-temp_BRT_test@y.values[[1]]
-  temp_MaxEnt_test<-performance(fit_models_lat[[i+3]],measure = "auc", x.measure = "cutoff")
-  AUC_MaxEnt_test<-temp_MaxEnt_test@y.values[[1]]
-  # train
-  temp_GAM_train<-performance(fit_models_lat[[i+4]],measure = "auc", x.measure = "cutoff")
-  AUC_GAM_train<-temp_GAM_train@y.values[[1]]
-  temp_RF_train<-performance(fit_models_lat[[i+5]],measure = "auc", x.measure = "cutoff")
-  AUC_RF_train<-temp_RF_train@y.values[[1]]
-  temp_BRT_train<-performance(fit_models_lat[[i+6]],measure = "auc", x.measure = "cutoff")
-  AUC_BRT_train<-temp_BRT_train@y.values[[1]]
-  temp_MaxEnt_train<-performance(fit_models_lat[[i+7]],measure = "auc", x.measure = "cutoff")
-  AUC_MaxEnt_train<-temp_MaxEnt_train@y.values[[1]]
-  temp<-data.frame(GAM_test=AUC_GAM_test,
-                   RF_test=AUC_RF_test,
-                   BRT_test=AUC_BRT_test, 
-                   MaxEnt_test=AUC_MaxEnt_test,
-                   GAM_train=AUC_GAM_train,
-                   RF_train=AUC_RF_train,
-                   BRT_train=AUC_BRT_train, 
-                   MaxEnt_train=AUC_MaxEnt_train)%>%
-    mutate(Best=names(which.max(.[,1:4])))    ##This will determine which model has the best AUC for each iter
-  return(temp)
-})%>%
-  bind_rows()
-AUCs_lat$Best<-AUCs_lat$Best%>%factor()
-
-
 ##---------AUC Township Sampling---------
-
-###---------AUC NO LAMBDA Township Sampling---------
 AUCs_township<-lapply(seq(2,(90),by=9),function(i){
   # Test
   temp_GAM_test<-performance(fit_models_township[[i]],measure = "auc", x.measure = "cutoff")
@@ -1400,8 +858,6 @@ AUCs_township<-lapply(seq(2,(90),by=9),function(i){
 AUCs_township$Best<-AUCs_township$Best%>%factor()
 
 ##---------AUC Random Sampling---------
-
-###---------AUC NO LAMBDA Random Sampling---------
 AUCs_random<-lapply(seq(2,(450),by=9),function(i){
   # Test
   temp_GAM_test<-performance(fit_models[[i]],measure = "auc", x.measure = "cutoff")
@@ -1437,88 +893,8 @@ AUCs_random$Best<-AUCs_random$Best%>%factor()
 
 #--------ROC Datasets--------
 
-##------ROC long Sampling----------------
-###------ROC NO LAMBDA long Sampling----------------
-ROCs_long<-lapply(seq(2,(90),by=9),function(i){
-  # test
-  temp_GAM_test<-performance(fit_models_long[[i]],measure = "tpr", x.measure = "fpr")
-  temp_RF_test<-performance(fit_models_long[[i+1]],measure = "tpr", x.measure = "fpr")
-  temp_BRT_test<-performance(fit_models_long[[i+2]],measure = "tpr", x.measure = "fpr")
-  temp_MaxEnt_test<-performance(fit_models_long[[i+3]],measure = "tpr", x.measure = "fpr")
-  # train
-  temp_GAM_train<-performance(fit_models_long[[i+4]],measure = "tpr", x.measure = "fpr")
-  temp_RF_train<-performance(fit_models_long[[i+5]],measure = "tpr", x.measure = "fpr")
-  temp_BRT_train<-performance(fit_models_long[[i+6]],measure = "tpr", x.measure = "fpr")
-  temp_MaxEnt_train<-performance(fit_models_long[[i+7]],measure = "tpr", x.measure = "fpr")
-  
-  # test
-  temp_GAM_df_test<-data.frame(Run=i/5,Model="GAM",FPR=temp_GAM_test@x.values[[1]],TPR=temp_GAM_test@y.values[[1]]) %>% mutate(Data = "Test")
-  temp_RF_df_test<-data.frame(Run=i/5,Model="RF",FPR=temp_RF_test@x.values[[1]],TPR=temp_RF_test@y.values[[1]])%>% mutate(Data = "Test")
-  temp_BRT_df_test<-data.frame(Run=i/5,Model="BRT",FPR=temp_BRT_test@x.values[[1]],TPR=temp_BRT_test@y.values[[1]])%>% mutate(Data = "Test")
-  temp_MaxEnt_df_test<-data.frame(Run=i/5,Model="MaxEnt",FPR=temp_MaxEnt_test@x.values[[1]],TPR=temp_MaxEnt_test@y.values[[1]])%>% mutate(Data = "Test")
-  # train
-  temp_GAM_df_train<-data.frame(Run=i/5,Model="GAM",FPR=temp_GAM_train@x.values[[1]],TPR=temp_GAM_train@y.values[[1]])%>% mutate(Data = "Train")
-  temp_RF_df_train<-data.frame(Run=i/5,Model="RF",FPR=temp_RF_train@x.values[[1]],TPR=temp_RF_train@y.values[[1]])%>% mutate(Data = "Train")
-  temp_BRT_df_train<-data.frame(Run=i/5,Model="BRT",FPR=temp_BRT_train@x.values[[1]],TPR=temp_BRT_train@y.values[[1]])%>% mutate(Data = "Train")
-  temp_MaxEnt_df_train<-data.frame(Run=i/5,Model="MaxEnt",FPR=temp_MaxEnt_train@x.values[[1]],TPR=temp_MaxEnt_train@y.values[[1]])%>% mutate(Data = "Train")
-  
-  
-  return(bind_rows(temp_GAM_df_test,temp_RF_df_test,temp_BRT_df_test,temp_MaxEnt_df_test,
-                   temp_GAM_df_train,temp_RF_df_train,temp_BRT_df_train,temp_MaxEnt_df_train))
-})%>%
-  bind_rows()
-
-ROCs_long$Run<-factor(ROCs_long$Run)
-ROCs_long$Model<-factor(ROCs_long$Model,
-                        levels=c("GAM","RF","BRT", "MaxEnt"),
-                        labels = c("GAM","RF","BRT", "MaxEnt"))
-ROCs_long$Data<-factor(ROCs_long$Data)
-ROCs_long<-ROCs_long%>%mutate(Buffer=".25km2")
-ROCs_long<-ROCs_long%>%mutate(Lambda="No")
-
-##------ROC lat Sampling----------------
-
-###------ROC NO LAMBDA lat Sampling----------------
-ROCs_lat<-lapply(seq(2,(45),by=9),function(i){
-  # test
-  temp_GAM_test<-performance(fit_models_lat[[i]],measure = "tpr", x.measure = "fpr")
-  temp_RF_test<-performance(fit_models_lat[[i+1]],measure = "tpr", x.measure = "fpr")
-  temp_BRT_test<-performance(fit_models_lat[[i+2]],measure = "tpr", x.measure = "fpr")
-  temp_MaxEnt_test<-performance(fit_models_lat[[i+3]],measure = "tpr", x.measure = "fpr")
-  # train
-  temp_GAM_train<-performance(fit_models_lat[[i+4]],measure = "tpr", x.measure = "fpr")
-  temp_RF_train<-performance(fit_models_lat[[i+5]],measure = "tpr", x.measure = "fpr")
-  temp_BRT_train<-performance(fit_models_lat[[i+6]],measure = "tpr", x.measure = "fpr")
-  temp_MaxEnt_train<-performance(fit_models_lat[[i+7]],measure = "tpr", x.measure = "fpr")
-  
-  # test
-  temp_GAM_df_test<-data.frame(Run=i/5,Model="GAM",FPR=temp_GAM_test@x.values[[1]],TPR=temp_GAM_test@y.values[[1]]) %>% mutate(Data = "Test")
-  temp_RF_df_test<-data.frame(Run=i/5,Model="RF",FPR=temp_RF_test@x.values[[1]],TPR=temp_RF_test@y.values[[1]])%>% mutate(Data = "Test")
-  temp_BRT_df_test<-data.frame(Run=i/5,Model="BRT",FPR=temp_BRT_test@x.values[[1]],TPR=temp_BRT_test@y.values[[1]])%>% mutate(Data = "Test")
-  temp_MaxEnt_df_test<-data.frame(Run=i/5,Model="MaxEnt",FPR=temp_MaxEnt_test@x.values[[1]],TPR=temp_MaxEnt_test@y.values[[1]])%>% mutate(Data = "Test")
-  # train
-  temp_GAM_df_train<-data.frame(Run=i/5,Model="GAM",FPR=temp_GAM_train@x.values[[1]],TPR=temp_GAM_train@y.values[[1]])%>% mutate(Data = "Train")
-  temp_RF_df_train<-data.frame(Run=i/5,Model="RF",FPR=temp_RF_train@x.values[[1]],TPR=temp_RF_train@y.values[[1]])%>% mutate(Data = "Train")
-  temp_BRT_df_train<-data.frame(Run=i/5,Model="BRT",FPR=temp_BRT_train@x.values[[1]],TPR=temp_BRT_train@y.values[[1]])%>% mutate(Data = "Train")
-  temp_MaxEnt_df_train<-data.frame(Run=i/5,Model="MaxEnt",FPR=temp_MaxEnt_train@x.values[[1]],TPR=temp_MaxEnt_train@y.values[[1]])%>% mutate(Data = "Train")
-  
-  
-  return(bind_rows(temp_GAM_df_test,temp_RF_df_test,temp_BRT_df_test,temp_MaxEnt_df_test,
-                   temp_GAM_df_train,temp_RF_df_train,temp_BRT_df_train,temp_MaxEnt_df_train))
-})%>%
-  bind_rows()
-
-ROCs_lat$Run<-factor(ROCs_lat$Run)
-ROCs_lat$Model<-factor(ROCs_lat$Model,
-                       levels=c("GAM","RF","BRT", "MaxEnt"),
-                       labels = c("GAM","RF","BRT", "MaxEnt"))
-ROCs_lat$Data<-factor(ROCs_lat$Data)
-ROCs_lat<-ROCs_lat%>%mutate(Buffer=".25km2")
-ROCs_lat<-ROCs_lat%>%mutate(Lambda="No")
 
 ##------ROC Township Sampling----------------
-
-###------ROC NO LAMBDA Township Sampling----------------
 ROCs_township<-lapply(seq(2,(90),by=9),function(i){
   # test
   temp_GAM_test<-performance(fit_models_township[[i]],measure = "tpr", x.measure = "fpr")
@@ -1558,8 +934,6 @@ ROCs_township<-ROCs_township%>%mutate(Lambda="No")
 
 
 ##------ROC random Sampling----------------
-
-###------ROC NO LAMBDA random Sampling----------------
 ROCs_random<-lapply(seq(2,(450),by=9),function(i){
   # test
   temp_GAM_test<-performance(fit_models[[i]],measure = "tpr", x.measure = "fpr")
@@ -1601,44 +975,7 @@ ROCs_random<-ROCs_random%>%mutate(Lambda="No")
 
 #------Mean AUC ----------------
 
-##-----Mean AUC long sampling -----
-###------Mean AUC NO LAMBDA---------------
-meanAUC_long<-data.frame(Model=c("GAM", "RF", "BRT", "MaxEnt", "GAM", "RF", "BRT", "MaxEnt"),
-                         Data = c("Test","Test","Test","Test","Train","Train","Train","Train"),
-                         meanAUC=c(mean(AUCs_long$GAM_test,na.rm = T),
-                                   mean(AUCs_long$RF_test,na.rm = T),
-                                   mean(AUCs_long$BRT_test,na.rm = T),
-                                   mean(AUCs_long$MaxEnt_test,na.rm=T),
-                                   mean(AUCs_long$GAM_train,na.rm=T),
-                                   mean(AUCs_long$RF_train,na.rm=T),
-                                   mean(AUCs_long$BRT_train,na.rm=T),
-                                   mean(AUCs_long$MaxEnt_train,na.rm=T))
-)
-meanAUC_long <- meanAUC_long %>% mutate(Buffer = ".25km2")
-meanAUC_long <- meanAUC_long %>% mutate(Lambda = "No")
-meanAUC_long$Model<-factor(meanAUC_long$Model,levels=c("GAM", "RF", "BRT", "MaxEnt"))
-
-
-##-----Mean AUC lat sampling -----
-###------Mean AUC NO LAMBDA---------------
-meanAUC_lat<-data.frame(Model=c("GAM", "RF", "BRT", "MaxEnt", "GAM", "RF", "BRT", "MaxEnt"),
-                        Data = c("Test","Test","Test","Test","Train","Train","Train","Train"),
-                        meanAUC=c(mean(AUCs_lat$GAM_test,na.rm = T),
-                                  mean(AUCs_lat$RF_test,na.rm = T),
-                                  mean(AUCs_lat$BRT_test,na.rm = T),
-                                  mean(AUCs_lat$MaxEnt_test,na.rm=T),
-                                  mean(AUCs_lat$GAM_train,na.rm=T),
-                                  mean(AUCs_lat$RF_train,na.rm=T),
-                                  mean(AUCs_lat$BRT_train,na.rm=T),
-                                  mean(AUCs_lat$MaxEnt_train,na.rm=T))
-)
-meanAUC_lat <- meanAUC_lat %>% mutate(Buffer = ".25km2")
-meanAUC_lat <- meanAUC_lat %>% mutate(Lambda = "No")
-meanAUC_lat$Model<-factor(meanAUC_lat$Model,levels=c("GAM", "RF", "BRT", "MaxEnt"))
-
-
 ##-----Mean AUC township sampling -----
-###------Mean AUC NO LAMBDA---------------
 meanAUC_township<-data.frame(Model=c("GAM", "RF", "BRT", "MaxEnt", "GAM", "RF", "BRT", "MaxEnt"),
                              Data = c("Test","Test","Test","Test","Train","Train","Train","Train"),
                              meanAUC=c(mean(AUCs_township$GAM_test,na.rm = T),
@@ -1657,7 +994,6 @@ meanAUC_township$Model<-factor(meanAUC_township$Model,levels=c("GAM", "RF", "BRT
 
 
 ##-----Mean AUC random sampling -----
-###------Mean AUC NO LAMBDA---------------
 meanAUC_random<-data.frame(Model=c("GAM", "RF", "BRT", "MaxEnt", "GAM", "RF", "BRT", "MaxEnt"),
                            Data = c("Test","Test","Test","Test","Train","Train","Train","Train"),
                            meanAUC=c(mean(AUCs_random$GAM_test,na.rm = T),
@@ -1750,8 +1086,7 @@ fit_models_lambda<-lapply(1:runs,function(i){
   })
 })%>%unlist(recursive = F)
 Sys.time()
-save(fit_models_lambda, file="/Users/avs79/Desktop/R/LongIslandCoding/Code/k/SDM_lambda.RData")
-
+save(fit_models_lambda, file="/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/SDM_lambda.RData")
 
 ##---------AUC Random Sampling---------
 AUCs_Lambda<-lapply(seq(2,(150),by=3),function(i){
@@ -1766,8 +1101,6 @@ AUCs_Lambda<-lapply(seq(2,(150),by=3),function(i){
   return(temp)
 })%>%
   bind_rows()
-
-
 
 ##------ROC Random Sampling----------------
 ROCs_Lambda<-lapply(seq(2,(150),by=3),function(i){
@@ -1798,7 +1131,6 @@ meanAUC_lambda <- data.frame(Model = c("Lambda"),
 
 #----------Suitability thresholds---------
 ##--------Random Sampling-------
-###------------NO LAMBDA------------
 thresholds<-lapply(seq(2,(450),by=9),function(i){
   # test
   temp_GAM_test<-performance(fit_models[[i]],measure = "tpr", x.measure = "fpr")
@@ -1839,7 +1171,6 @@ thresholds <- thresholds %>%
   mutate(Lambda = "No")
 
 #------Thresholds for P/A------
-##------Without Lambda-------
 BRTThreshold <- thresholds[[1,2]]
 GAMThreshold <- thresholds[[2,2]]
 MaxEntThreshold <- thresholds[[3,2]]
@@ -1855,7 +1186,6 @@ rm(BRTThreshold, GAMThreshold, MaxEntThreshold, RFThreshold)
 
 
 #-----------Get Disagreement----------
-###-----Without Lambda-----
 LST_Predict <- LST_Predict %>% 
   mutate(OccurrenceGAM = as.integer(OccurrenceGAM),
          OccurrenceBRT = as.integer(OccurrenceBRT),
@@ -1871,8 +1201,6 @@ LST_Predict <- LST_Predict %>%
                      abs(OccurrenceMaxEnt - OccurrenceRF)))
 
 #-----------Select Field Sites from July-September----------
-
-###--------Without Lambda--------
 # Filter for july-Septemeber
 new_JAS <- LST_Predict %>% 
   filter(Month %in% c(7, 8, 9)) 
@@ -2087,32 +1415,13 @@ ggplot() +
   geom_sf(data = spatial_bias_landuse_map, aes(color = Type_.25km2), size = 1.5) +
   geom_point(data = over_under_long_biasmap, aes(x = coords.x1.x, y = coords.x2.x, fill = bias_word), color = "black", shape = 21, size = 3)+
   facet_wrap(Model~.)
-  
-  
-  
-  
-  
-# +
-  # scale_color_distiller(limits = c(-1,13), palette = "YlOrRd", direction=+1,
-  #                       breaks = c(0, 6, 12),
-  #                       labels = c("Low", "Medium", "High")) +
-  # labs(color = "Disagreement", fill = NULL, x = "Longitude", y = "Latitude") +
-  # theme_minimal() +
-  # labs(title = "Disagreement Map", x = "Longitude", y = "Latitude") +
-  # theme(legend.position = "right")
-# +
-#   geom_point(data = sites, 
-#              aes(x = LongNEW, y = LatNEW, fill = legend))
-
-
-
 
 # -----INVASION------
 
 # Invasion looping (continuously add years of data then train the models)
-if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/invasion_series.RData")) {
+if (file.exists("/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/invasion_series.RData")) {
   # If the file exists, load it
-  load("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/invasion_series.RData")
+  load("/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/invasion_series.RData")
   print("File loaded successfully.")
 } else {
   # If the file does not exist, run code to create the file
@@ -2325,7 +1634,7 @@ if (file.exists("/Users/avs79/Desktop/R/LongIslandCoding/Code/k/invasion_series.
     })
   })%>%unlist(recursive = F)
   
-  save(fit_models_invasion, file = "/Users/avs79/Desktop/R/LongIslandCoding/Code/k/invasion_series.RData")
+  save(fit_models_invasion, file = "/Users/avs79/Desktop/R/SDM_LI_ALB_FV/Data/SDM/invasion_series.RData")
   
   print("File created and saved successfully.")
 }
@@ -2353,27 +1662,6 @@ invasion_scores_long$LogScore <- ifelse(invasion_scores_long$LogScore == 0, 0.00
 
 
 # plot
-ggplot(invasion_scores_long, aes(x = TrainingYrs, y = LogScore, color = Model, fill = Model))+
-  geom_smooth(method = "loess", span = 3)+
-  facet_grid(~Month)
-ggplot(invasion_scores_long, aes(x = TrainingYrs, y = LogScore, color = Model, fill = Model))+
-  geom_smooth(method = "loess", span = 3)
-
-ggplot(invasion_scores_long, aes(x = TrainingYrs, y = LogScore, color = Model, fill = Model))+
-  geom_smooth(method = "loess", span = 1)+
-  facet_grid(~Month)
-ggplot(invasion_scores_long, aes(x = TrainingYrs, y = LogScore, color = Model, fill = Model))+
-  geom_smooth(method = "loess", span = 1)
-
-
-
-invasion_summary <- invasion_scores_long %>%
-  group_by(Model, TrainingYrs) %>%
-  summarise(
-    mean = mean(LogScore),
-    se = sd(LogScore)/sqrt(n()),
-    .groups = 'drop')
-
 ggplot()+
   geom_errorbar(data = invasion_summary, aes(ymin = mean - se, ymax = mean + se, x = TrainingYrs, group = Model, color = Model), width = 0.2, stat = "identity")+
   geom_line(data = invasion_summary, aes(x = TrainingYrs, y = mean, group = Model, color = Model))+
@@ -2395,13 +1683,6 @@ ggplot()+
 
 
 #---------Plots---------
-
-
-
-
-
-
-
 
 ##------field Sites-----
 sites <- read_excel("Data/final_SITES.xlsx")
@@ -2751,7 +2032,6 @@ ggplot() +
   geom_point(data = sites, 
              aes(x = LongNEW, y = LatNEW, fill = legend))
 
-
 # what land uses did models disagree the most in across july-sept?
 
 landuse_disagreement <- new_JAS %>% group_by(Site) %>% summarise(Disagreement = sum(Concur),
@@ -2770,23 +2050,6 @@ landuse_bias <- landuse_disagreement %>% group_by(Type_.25km2) %>%
 model3 <- aov(Disagreement ~ Type_.25km2, data = landuse_disagreement)
 summary(model3)
 tukey3 <- TukeyHSD(model3)
-
-
-ggplot(landuse_disagreement, aes(x = Type_.25km2, y = Disagreement))+
-  geom_bar(stat = "summary", fun = "mean", fill = "#472F7D", color = "black")+
-  labs(x = "Landuse", y = "Disagreement")+
-  theme_minimal()+
-  theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 13),
-        axis.title.x = element_text(size = 18),
-        axis.text.y = element_text(size = 15),
-        axis.title.y = element_text(size = 18),
-        axis.line = element_line(color = "black"),
-        axis.ticks = element_line(color = "black")
-  )+
-  scale_x_discrete(labels = c("Altered", "Developed - Low", "Developed - Medium/High", "Natural"))
-  
 
 
 # Extract p-values and determine significance groups
