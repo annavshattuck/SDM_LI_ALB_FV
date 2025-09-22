@@ -19,6 +19,12 @@ library(readxl)
 library(scoring)
 library(multcompView)
 library(gridExtra)
+library(grid)
+library(ggpubr)
+library(dismo)
+library(rJava)
+
+
 
 
 #-----DATA------
@@ -1308,7 +1314,7 @@ data_summary <- data_summary %>%
   mutate(groups = letters[as.character(interaction_term)])
 
 
-ggplot(data_summary, aes(x = Month, y = mean_value, fill = Model)) +
+LogA <- ggplot(data_summary, aes(x = Month, y = mean_value, fill = Model)) +
   geom_bar(stat = "summary", fun = "mean", position = position_dodge(width = 0.9), color = "black") +
   labs(x = "Month",
        y = "Model Performance (log score)") +
@@ -1318,16 +1324,17 @@ ggplot(data_summary, aes(x = Month, y = mean_value, fill = Model)) +
             position = position_dodge(width = 0.9), 
             vjust = -0.5, size = 5)+
   theme_minimal()+
-  theme(panel.grid.major = element_blank(), 
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 15),
-        axis.title.x = element_text(size = 18),
-        axis.text.y = element_text(size = 15),
-        axis.title.y = element_text(size = 18),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 18),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
         axis.line = element_line(color = "black"),
-        axis.ticks = element_line(color = "black"))
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13))
 
 # how did models mispredict? were they biased towards over or underpredicting?
 
@@ -1353,7 +1360,7 @@ over_under_long$Model <- as.factor(over_under_long$Model)
 levels(over_under_long$Model) <- c("BRT", "GAM", "MaxEnt", "RF")
 
 
-ggplot(over_under_long, aes(x = Month, y = Bias, fill = Model)) +
+LogB <- ggplot(over_under_long, aes(x = Month, y = Bias, fill = Model)) +
   geom_bar(stat = "summary", fun = "mean", position = position_dodge(width = 0.9), color = "black") +
   labs(x = "Month",
        y = "Model Bias") +
@@ -1361,17 +1368,21 @@ ggplot(over_under_long, aes(x = Month, y = Bias, fill = Model)) +
   theme_minimal()+
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 15),
-        axis.title.x = element_text(size = 18),
-        axis.text.y = element_text(size = 15),
-        axis.title.y = element_text(size = 18),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 18), 
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
         axis.line = element_line(color = "black"),
-        axis.ticks = element_line(color = "black"))
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13))
+
+ggarrange(LogA, LogB, ncol = 2, labels = c("a)", "b)"))
+
+
+
 
 # map of over and underpredicting 
-
 bias_landuse_map <- LST_Predict %>% select(Year, Month, Site, coords.x1.x, coords.x2.x, Imp_.25km2, EVI_.25km2, DLST_1km2, NLST_1km2, Type_.25km2)
 bias_landuse_map <- bias_landuse_map %>% filter(Year == "2023", Month == 7) 
 #^^^^^land use does not change through a season but other variables do! Be cautious with mapping this!!!
@@ -1650,6 +1661,14 @@ invasion_scores_long$Month <- invasion_scores_long$Month %>% as.factor()
 invasion_scores_long$LogScore <- ifelse(invasion_scores_long$LogScore >= 10, 10, invasion_scores_long$LogScore)
 invasion_scores_long$LogScore <- ifelse(invasion_scores_long$LogScore == 0, 0.00001, invasion_scores_long$LogScore)
 
+# plot
+invasion_summary <- invasion_scores_long %>%
+  group_by(Model, TrainingYrs) %>%
+  summarise(
+    mean = mean(LogScore),
+    se = sd(LogScore)/sqrt(n()),
+    .groups = 'drop')
+
 
 # plot
 ggplot()+
@@ -1660,7 +1679,7 @@ ggplot()+
   labs(x = "Training data", y = "Model Performance (log score)")+
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 13),
+        axis.text.x = element_text(size = 10),
         axis.title.x = element_text(size = 18),
         axis.text.y = element_text(size = 15),
         axis.title.y = element_text(size = 18),
@@ -1711,7 +1730,22 @@ ggplot()+
              aes(x = Longitude.y, y = Latitude.y, color = Year), size = 3) + 
   scale_color_viridis_d(option = "viridis")+
   labs(x = "Longitude", y = "Latitude")+
-  theme_minimal() 
+  theme_minimal() +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13))+
+  annotation_custom(
+    grob = textGrob("Source: gis.ny.gov", x = 0.7, y = 0.1, hjust = 0, gp = gpar(fontsize = 10)),
+    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf
+  )
 
 
 ##-----maps for  suitability across models in prediction dataset----
@@ -1779,25 +1813,6 @@ ggplot() +
   labs(title = "Suitability Map D", x = "Longitude", y = "Latitude", color = "Suitability Score") +
   theme(legend.position = "right")
 
-
-
-
-
-
-# spatial_LST_Predict_long <- st_as_sf(LST_Predict_long, coords = c("coords.x1.x","coords.x2.x"),crs=crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-
-# ggplot() +
-#   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-#   geom_sf(data = spatial_LST_Predict_long, aes(color = suitability), size = .25, alpha = 0.8) +
-#   scale_color_viridis_c(option = "plasma", direction = -1, name = "Habitat Suitability",        # Title for the legend
-#                         breaks = c(0.1, .5, 0.9),
-#                         labels = c("Low", "Medium", "High")) +  # Suitability color scale
-#   theme_minimal() +
-#   facet_grid(suitability_type~Month)+
-#   labs(title = "Suitability Map", x = "Longitude", y = "Latitude", color = "Suitability Score") +
-#   theme(legend.position = "right")
-
-
 # average across months 
 ave_LST_Predict_long <- LST_Predict_long %>% 
   group_by(Site, suitability_type, coords.x1.x, coords.x2.x) %>% 
@@ -1807,14 +1822,50 @@ spatial_ave_LST_Predict_long <- st_as_sf(ave_LST_Predict_long, coords = c("coord
 
 ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_ave_LST_Predict_long, aes(color = suitability), size = .5) +
+  geom_sf(data = spatial_ave_LST_Predict_long, aes(color = suitability), size = 1) +
   scale_color_viridis_c(option = "plasma", direction = -1, name = "Habitat Suitability",        # Title for the legend
                         breaks = c(0.1, .45, 0.8),
                         labels = c("Low", "Medium", "High")) +  # Suitability color scale
   theme_minimal() +
   facet_wrap(~suitability_type)+
+  labs(x = "Longitude", y = "Latitude", color = "Suitability Score") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13),
+        strip.text = element_text(size = 15))+
+  annotation_custom(
+          grob = textGrob("Source: gis.ny.gov", x = 0.5, y = 0.1, hjust = 0, gp = gpar(fontsize = 10)),
+          xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf)
+
+
+# graphical abstract figure
+ggplot() +
+  geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
+  geom_sf(data = spatial_ave_LST_Predict_long, aes(color = suitability), size = 1.5) +
+  scale_color_viridis_c(
+    option = "plasma",
+    direction = -1,
+    name = "Habitat Suitability",
+    breaks = c(0.1, 0.45, 0.8),
+    labels = c("Low", "Medium", "High"),
+    guide = guide_colorbar(direction = "horizontal", title.position = "top", title.hjust = 0.5)
+  ) +
+  theme_minimal() +
+  facet_wrap(~suitability_type, ncol = 1) +
   labs(title = "Suitability Map", x = "Longitude", y = "Latitude", color = "Suitability Score") +
-  theme(legend.position = "right")
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8)
+  )
 
 
 ##-----predictor maps----
@@ -1838,45 +1889,101 @@ LST_Predict_predictors <- LST_Predict %>%
 spatial_LST_Predict_predictors <- st_as_sf(LST_Predict_predictors, coords = c("coords.x1.x","coords.x2.x"),crs=crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
 
 # imp
-ggplot() +
+IMP <- ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_imp), size = 1.25) +
+  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_imp), size = 1) +
   scale_color_viridis_c(option = "plasma", direction = -1, name = "% Impervious Surface") +  # Suitability color scale
   theme_minimal() +
   labs( x = "Longitude", y = "Latitude", color = "Suitability Score") +
-  theme(legend.position = "right")
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10))
 # DLST
-ggplot() +
+DLST <- ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_DLST), size = 1.25) +
+  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_DLST), size = 1) +
   scale_color_viridis_c(option = "inferno", direction = 1, name = "Day Surface Temperature") +  # Suitability color scale
   theme_minimal() +
   labs( x = "Longitude", y = "Latitude", color = "Suitability Score") +
-  theme(legend.position = "right")
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10))
 # NLST
-ggplot() +
+NLST <- ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_NLST), size = 1.25) +
+  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_NLST), size = 1) +
   scale_color_viridis_c(option = "inferno", direction = 1, name = "Night Surface Temperature") +  # Suitability color scale
   theme_minimal() +
   labs( x = "Longitude", y = "Latitude", color = "Suitability Score") +
-  theme(legend.position = "right")
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10))+
+  annotation_custom(
+    grob = textGrob("Source: gis.ny.gov", x = 0.6, y = 0.1, hjust = 0, gp = gpar(fontsize = 8)),
+    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf
+  )
 # EVI
-ggplot() +
+EVI <- ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_EVI), size = 1.75) +
-  scale_color_viridis_c(option = "mako", direction = 1, name = "EVI") +  # Suitability color scale
+  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_EVI), size = 1) +
+  scale_color_viridis_c(option = "mako", direction = 1, name = "EVI                                       ") +  # Suitability color scale
   theme_minimal() +
   labs( x = "Longitude", y = "Latitude", color = "Suitability Score") +
-  theme(legend.position = "right")
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10))
 # Land cover
-ggplot() +
+LC <- ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_LC), size = 1.25) +
+  geom_sf(data = spatial_LST_Predict_predictors, aes(color = ave_LC), size = 1) +
   # scale_color_viridis(option = "plasma", name = "Landcover") +  # Suitability color scale
   theme_minimal() +
   labs( x = "Longitude", y = "Latitude", color = "Land Cover") +
-  theme(legend.position = "right")
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10))
+
+ggarrange(IMP, LC, EVI, DLST, NLST, ncol = 1, nrow = 5, labels = c("a)","b)","c)","d)","e)"))
 
 
 ##-----suitability estimates across months and models----
@@ -1922,7 +2029,7 @@ ggplot(data2_summary, aes(x = Month, y = mean_value, fill = suitability_type))+
   geom_text(aes(label = groups, group = suitability_type), 
             position = position_dodge(width = 0.9), 
             vjust = -0.5, size = 5)+
-  labs(title = "Suitability", x = "Month", y = "Average Habitat Suitability", fill = "Model") 
+  labs( x = "Month", y = "Average Habitat Suitability", fill = "Model") 
 
 
 ##---------AUC---------
@@ -1933,20 +2040,25 @@ ggplot(ROCs_random,aes(x=FPR, y=TPR, color=Run, linetype = Data))+
   geom_smooth(color="black")+
   geom_abline(slope=1,intercept = 0,linetype="dotted")+
   geom_label(data=meanAUC_random %>% filter(Data == "Test"),aes(x=.7,y=0.05,label=paste("Mean Testing AUC = ",round(meanAUC,digits = 3))),
-             color="black",size=6)+
+             color="black",size=3)+
   geom_label(data=meanAUC_random %>% filter(Data == "Train"),aes(x=.7,y=0.15,label=paste("Mean Training AUC = ",round(meanAUC,digits = 3))),
-             color="black",size=6)+
+             color="black",size=3)+
   scale_color_discrete(guide=NULL)+
   facet_wrap(Model~.)+
   xlab("False Positivity Rate")+
   ylab("True Positivity Rate")+
-  theme_bw()+
-  theme(strip.text = element_text(size=7,face="bold"),
-        strip.background = element_blank(),
-        legend.text = element_text(size=6,face="bold"),
-        legend.title = element_text(size=8,face="bold"),
-        axis.text = element_text(size=6),
-        axis.title = element_text(size=8,face="bold"))
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13),
+        strip.text = element_text(size = 15))
 
 # township sampling
 ggplot(ROCs_township,aes(x=FPR, y=TPR, color=Run, linetype = Data))+
@@ -1954,20 +2066,25 @@ ggplot(ROCs_township,aes(x=FPR, y=TPR, color=Run, linetype = Data))+
   geom_smooth(color="black")+
   geom_abline(slope=1,intercept = 0,linetype="dotted")+
   geom_label(data=meanAUC_township %>% filter(Data == "Test"),aes(x=.7,y=0.05,label=paste("Mean Testing AUC = ",round(meanAUC,digits = 3))),
-             color="black",size=6)+
+             color="black",size=3)+
   geom_label(data=meanAUC_township %>% filter(Data == "Train"),aes(x=.7,y=0.15,label=paste("Mean Training AUC = ",round(meanAUC,digits = 3))),
-             color="black",size=6)+
+             color="black",size=3)+
   scale_color_discrete(guide=NULL)+
   facet_wrap(Model~.)+
   xlab("False Positivity Rate")+
   ylab("True Positivity Rate")+
-  theme_bw()+
-  theme(strip.text = element_text(size=7,face="bold"),
-        strip.background = element_blank(),
-        legend.text = element_text(size=6,face="bold"),
-        legend.title = element_text(size=8,face="bold"),
-        axis.text = element_text(size=6),
-        axis.title = element_text(size=8,face="bold"))
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13),
+        strip.text = element_text(size = 15))
 
 # lambda with random sampling 
 ggplot(ROCs_Lambda,aes(x=FPR, y=TPR, color=Run, linetype = Data))+
@@ -1981,13 +2098,18 @@ ggplot(ROCs_Lambda,aes(x=FPR, y=TPR, color=Run, linetype = Data))+
   scale_color_discrete(guide=NULL)+
   xlab("False Positivity Rate")+
   ylab("True Positivity Rate")+
-  theme_bw()+
-  theme(strip.text = element_text(size=7,face="bold"),
-        strip.background = element_blank(),
-        legend.text = element_text(size=6,face="bold"),
-        legend.title = element_text(size=8,face="bold"),
-        axis.text = element_text(size=6),
-        axis.title = element_text(size=8,face="bold"))
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 13),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13),
+        strip.text = element_text(size = 15))
 
 ##------maps of disagreement across months or totalled with one map with FIELD SITE LOCATIONS------
 spatial_JAS_disagreement <- st_as_sf(JAS_disagreement, coords = c("coords.x1.x","coords.x2.x"),crs=crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
@@ -1996,31 +2118,30 @@ spatial_new_JAS <- st_as_sf(new_JAS, coords = c("coords.x1.x","coords.x2.x"),crs
 
 ggplot() +
   geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_JAS_disagreement, aes(color = TotalConcur), size = 1) +
+  geom_sf(data = spatial_JAS_disagreement, aes(color = TotalConcur), size = 2.25) +
   scale_color_distiller(limits = c(-1,13), palette = "YlOrRd", direction=+1,
                        breaks = c(0, 6, 12),
                        labels = c("Low", "Medium", "High")) +
   labs(color = "Disagreement", fill = NULL, x = "Longitude", y = "Latitude") +
   theme_minimal() +
-  labs(title = "Disagreement Map", x = "Longitude", y = "Latitude") +
-  theme(legend.position = "right")+
+  labs(x = "Longitude", y = "Latitude") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13))+
   geom_point(data = sites, 
-             aes(x = LongNEW, y = LatNEW, fill = legend))
-
-
-ggplot() +
-  geom_sf(data = boundary_AEA, fill = "grey90", color = "black", size = 0.2) +  # Background shape
-  geom_sf(data = spatial_new_JAS, aes(color = Concur), size = 1) +
-  scale_color_distiller(limits = c(-1,5), palette = "YlOrRd", direction=+1,
-                        breaks = c(0, 2, 4),
-                        labels = c("Low", "Medium", "High")) +
-  labs(color = "Disagreement", fill = NULL, x = "Longitude", y = "Latitude") +
-  theme_minimal() +
-  facet_grid(Month~.)+
-  labs(title = "Disagreement Map", x = "Longitude", y = "Latitude") +
-  theme(legend.position = "right")+
-  geom_point(data = sites, 
-             aes(x = LongNEW, y = LatNEW, fill = legend))
+             aes(x = LongNEW, y = LatNEW, fill = legend), size = 2)+
+  annotation_custom(
+    grob = textGrob("Source: gis.ny.gov", x = 0.7, y = 0.1, hjust = 0, gp = gpar(fontsize = 10)),
+    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf
+  )
 
 # what land uses did models disagree the most in across july-sept?
 
@@ -2276,7 +2397,7 @@ pdpType <- ggplot(pdp_Type, aes(x = feature_grid_type, y = Suitability, color = 
   scale_color_viridis_d(option = "viridis")+
   theme_minimal()+
   scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
-  theme(legend.position = "none",
+  theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         axis.text.x = element_text(size = 8),
@@ -2284,8 +2405,9 @@ pdpType <- ggplot(pdp_Type, aes(x = feature_grid_type, y = Suitability, color = 
         axis.text.y = element_text(size = 15),
         axis.title.y = element_text(size = 18),
         axis.line = element_line(color = "black"),
-        axis.ticks = element_line(color = "black"))
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 25))
 
 
-grid.arrange(pdpIMP, pdpEVI, pdpDLST, pdpNLST, pdpMonth, pdpYear, pdpType, ncol = 3, nrow =3)
+ggarrange(pdpIMP, pdpEVI, pdpDLST, pdpNLST, pdpMonth, pdpYear, pdpType, ncol = 3, nrow =3, labels = c("a)","b)","c)","d)","e)","f)","g)"), common.legend = TRUE)
 
