@@ -1314,8 +1314,8 @@ data_summary <- data_summary %>%
   mutate(groups = letters[as.character(interaction_term)])
 
 
-LogA <- ggplot(data_summary, aes(x = Month, y = mean_value, fill = Model)) +
-  geom_bar(stat = "summary", fun = "mean", position = position_dodge(width = 0.9), color = "black") +
+LogA <- ggplot(data_summary, aes(x = Month, y = -mean_value, fill = Model, group_by = Model)) +
+  geom_line(stat = "summary", fun = "mean", position = position_dodge(width = 0.9), color = "black") +
   labs(x = "Month",
        y = "Model Performance (log score)") +
   scale_x_discrete(labels = c("7" = "July", "8" = "August","9" = "September"))+
@@ -1672,8 +1672,8 @@ invasion_summary <- invasion_scores_long %>%
 
 # plot
 ggplot()+
-  geom_errorbar(data = invasion_summary, aes(ymin = mean - se, ymax = mean + se, x = TrainingYrs, group = Model, color = Model), width = 0.2, stat = "identity")+
-  geom_line(data = invasion_summary, aes(x = TrainingYrs, y = mean, group = Model, color = Model))+
+  geom_errorbar(data = invasion_summary, aes(ymin = -(mean - se), ymax = -(mean + se), x = TrainingYrs, group = Model, color = Model), width = 0.2, stat = "identity")+
+  geom_line(data = invasion_summary, aes(x = TrainingYrs, y = -mean, group = Model, color = Model))+
   theme_minimal()+
   scale_color_viridis_d(option = "viridis", labels = c("BRT","GAM", "MaxEnt", "RF"))+
   labs(x = "Training data", y = "Model Performance (log score)")+
