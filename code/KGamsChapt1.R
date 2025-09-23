@@ -23,6 +23,7 @@ library(grid)
 library(ggpubr)
 library(dismo)
 library(rJava)
+library(ggrepel)
 
 
 
@@ -1314,16 +1315,18 @@ data_summary <- data_summary %>%
   mutate(groups = letters[as.character(interaction_term)])
 
 
-LogA <- ggplot(data_summary, aes(x = Month, y = -mean_value, fill = Model, group_by = Model)) +
-  geom_line(stat = "summary", fun = "mean", position = position_dodge(width = 0.9), color = "black") +
+LogA <- ggplot(data_summary, aes(x = Month, y = -mean_value, color = Model, group = Model)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  geom_text(aes(label = groups, 
+                y = -mean_value + ifelse(Model == "BRT", 0.03,
+                                         ifelse(Model == "GAM", 0.02,
+                                                ifelse(Model == "MaxEnt", -0.018, -0.03)))),size = 5)+
   labs(x = "Month",
-       y = "Model Performance (log score)") +
-  scale_x_discrete(labels = c("7" = "July", "8" = "August","9" = "September"))+
-  scale_fill_viridis_d(option = "viridis", labels = c("BRT", "GAM", "MaxEnt", "RF"))+
-  geom_text(aes(label = groups, group = Model), 
-            position = position_dodge(width = 0.9), 
-            vjust = -0.5, size = 5)+
-  theme_minimal()+
+       y = "Model Performance (negative log score)") +
+  scale_x_discrete(labels = c("7" = "July", "8" = "August","9" = "September")) +
+  scale_color_viridis_d(option = "viridis", labels = c("BRT", "GAM", "MaxEnt", "RF")) +
+  theme_minimal() +
   theme(legend.position = "none",
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -1335,6 +1338,7 @@ LogA <- ggplot(data_summary, aes(x = Month, y = -mean_value, fill = Model, group
         axis.ticks = element_line(color = "black"),
         legend.text = element_text(size = 13),
         legend.title = element_text(size = 13))
+
 
 # how did models mispredict? were they biased towards over or underpredicting?
 
@@ -1676,7 +1680,7 @@ ggplot()+
   geom_line(data = invasion_summary, aes(x = TrainingYrs, y = -mean, group = Model, color = Model))+
   theme_minimal()+
   scale_color_viridis_d(option = "viridis", labels = c("BRT","GAM", "MaxEnt", "RF"))+
-  labs(x = "Training data", y = "Model Performance (log score)")+
+  labs(x = "Training data", y = "Model Performance (negative log score)")+
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         axis.text.x = element_text(size = 10),
@@ -2411,3 +2415,50 @@ pdpType <- ggplot(pdp_Type, aes(x = feature_grid_type, y = Suitability, color = 
 
 ggarrange(pdpIMP, pdpEVI, pdpDLST, pdpNLST, pdpMonth, pdpYear, pdpType, ncol = 3, nrow =3, labels = c("a)","b)","c)","d)","e)","f)","g)"), common.legend = TRUE)
 
+
+## --------site sampling------
+
+# plot all unique sites colored by the frequncy of years used
+sampling_ALB <- alboraw %>%
+  group_by(Site, Township, Latitude.y, Longitude.y) %>%                  # Group the data by site
+  summarize(n_years = n_distinct(Year), , .groups = "drop")
+
+site_summary <- sampling_ALB %>%
+  count(n_years, name = "n_sites") %>%
+  mutate(percent = 100 * n_sites / sum(n_sites))
+
+site_summary
+
+# plotting
+boundary_AEA<-st_read("./Data/Remote Sensed Data/NYS_Civil_Boundaries/Counties_Shoreline.shp",quiet=T)%>%
+  filter(NAME=="Suffolk")%>%
+  st_transform(crs=crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))%>%
+  dplyr::select(geometry)%>%
+  st_union()%>%
+  as_Spatial()
+boundary_AEA <- st_as_sf(boundary_AEA)
+
+ggplot()+
+  geom_sf(data=boundary_AEA,aes(geometry=geometry), fill="grey90",color="black")+
+  geom_point(data=sampling_ALB,
+             aes(x = Longitude.y, y = Latitude.y, color = n_years), size = 1) +
+  scale_color_distiller(limits = c(0,17), palette = "YlOrRd", direction=+1,
+                        breaks = c(1, 4, 8, 12, 16),
+                        labels = c("1", "4", "8", "12", "16")) +
+  labs(x = "Longitude", y = "Latitude", color = "Sampling Years")+
+  theme_minimal() +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 15),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 15),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"),
+        legend.text = element_text(size = 13),
+        legend.title = element_text(size = 13))+
+  annotation_custom(
+    grob = textGrob("Source: gis.ny.gov", x = 0.7, y = 0.1, hjust = 0, gp = gpar(fontsize = 10)),
+    xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf
+  )
