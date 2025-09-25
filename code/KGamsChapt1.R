@@ -1381,7 +1381,7 @@ LogB <- ggplot(over_under_long, aes(x = Month, y = Bias, fill = Model)) +
         legend.text = element_text(size = 13),
         legend.title = element_text(size = 13))
 
-ggarrange(LogA, LogB, ncol = 2, labels = c("a)", "b)"))
+B <- ggarrange(LogA, LogB, ncol = 2, labels = c("a)", "b)"))
 
 
 
@@ -2421,7 +2421,7 @@ ggarrange(pdpIMP, pdpEVI, pdpDLST, pdpNLST, pdpMonth, pdpYear, pdpType, ncol = 3
 # plot all unique sites colored by the frequncy of years used
 sampling_ALB <- alboraw %>%
   group_by(Site, Township, Latitude.y, Longitude.y) %>%                  # Group the data by site
-  summarize(n_years = n_distinct(Year), , .groups = "drop")
+  summarize(n_years = n_distinct(Year), .groups = "drop")
 
 site_summary <- sampling_ALB %>%
   count(n_years, name = "n_sites") %>%
