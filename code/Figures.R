@@ -508,4 +508,146 @@ ggsave(
 )
 
 # S8Figure
+pdpIMP <- ggplot(pdp_Imp, aes(x = Imp_.25km2, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "Impervious Surface", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 8),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+pdpEVI <- ggplot(pdp_EVI, aes(x = EVI_.25km2*0.0001, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "EVI", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 8),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+pdpDLST <- ggplot(pdp_DLST, aes(x = DLST_1km2, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "Day Land Surface Temperature", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 8),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+pdpNLST <- ggplot(pdp_NLST, aes(x = NLST_1km2, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "Night Land Surface Temperature", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 8),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+pdpMonth <- ggplot(pdp_Month, aes(x = Month, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "Month", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 8),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+pdpYear <- ggplot(pdp_Year, aes(x = Year, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "Year", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 8),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))
+pdpType <- ggplot(pdp_Type, aes(x = feature_grid_type, y = Suitability, color = Model))+
+  geom_point()+
+  labs(x = "Land Cover Type", y = "Suitability")+
+  scale_color_viridis_d(option = "viridis")+
+  theme_minimal()+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(size = 8),
+    axis.title.x = element_text(size = 13),
+    axis.text.y = element_text(size = 8),
+    axis.title.y = element_text(size = 13),
+    axis.line = element_line(color = "black"),
+    axis.ticks = element_line(color = "black"),
+    legend.text = element_text(size = 15))
+
+
+S8Figure <- ggarrange(pdpIMP, pdpEVI, pdpDLST, pdpNLST, pdpMonth, pdpYear, pdpType, ncol = 2, nrow =4, labels = c("a)","b)","c)","d)","e)","f)","g)"), common.legend = TRUE)
+
+ggsave(
+  filename = "S8Figure.png",
+  plot = S8Figure,                        # your ggplot object
+  width = 170, 
+  height = 300,       # mm (double column wide, good aspect ratio)
+  units = "mm",
+  dpi = 600,                       # print-ready
+  device = ragg::agg_png,          # crisp lines and text
+  bg = "white"
+)
+
 # S9Figure
+S9Figure <- ggplot(data3_summary, aes(x = Type_.25km2, y = mean_value))+
+  geom_bar(stat = "summary", fun = "mean", fill = "#472F7D", color = "black")+
+  theme_minimal()+
+  geom_text(aes(label = groups), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 4)+
+  labs(x = "Landuse", y = "Disagreement")+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.title.x = element_text(size = 13),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 13),
+        axis.line = element_line(color = "black"),
+        axis.ticks = element_line(color = "black"))+
+  scale_x_discrete(labels = c("Altered", "Developed - Low", "Developed - Medium/High", "Natural"))
+
+ggsave(
+  filename = "S9Figure.png",
+  plot = S9Figure,                        # your ggplot object
+  width = 170, 
+  height = 120,       # mm (double column wide, good aspect ratio)
+  units = "mm",
+  dpi = 600,                       # print-ready
+  device = ragg::agg_png,          # crisp lines and text
+  bg = "white"
+)
